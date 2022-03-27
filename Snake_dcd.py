@@ -27,6 +27,7 @@ TODO:
 import sys
 import pygame
 import copy
+from random import randint
 
 #%% Defaults
 #%%% colours
@@ -58,6 +59,9 @@ compass={"N":[0,-1],
          "E":[1,0],
          "S":[0,1],
          "W":[-1,0]}
+ijkl={pygame.K_i:'N',pygame.K_j:'W',pygame.K_k:'S',pygame.K_l:'E'}
+wasd={pygame.K_w:'N',pygame.K_a:'W',pygame.K_s:'S',pygame.K_d:'E'}
+updown={pygame.K_UP:'N',pygame.K_LEFT:'W',pygame.K_DOWN:'S',pygame.K_RIGHT:'E'}
 colour={0:GRY,1:GRN, 2:CYA}
 #%% classes
 class Player:
@@ -65,54 +69,86 @@ class Player:
     The player is a snake, with a head which moves along all the squares.
     Each game tick, there is a movement.
     """
-    def __init__(self,pose = None,dir = None, colour = None):
+    def __init__(self,pose = None,dir = None, colour = None, cset = None):
         self.pose=pose
         self.dir = dir
         self.colour=colour
+        self.cset=cset
+        self.number=len(players)+1
         if colour == None:
             self.colour = RED
         if pose == None:
             pose = [8,8]
         if dir == None:
             self.dir = "N"
+        if self.cset == None:
+            self.cset = updown
         self.length = 0
         self.body = [[self.length,pose]] #body with just the head
         self.grow = 1  #grow at the first step
-        print(f'player initialised: {self.body}, GR: {self.grow}, dir: {self.dir}')
+        print(f'player {self.number} initialised: {self.body}, GR: {self.grow}, dir: {self.dir}')
+
+    def dokey(self,event):
+        if event.key in player.cset:
+            print(f'Probeer dit eens: {player.cset[event.key]}')
+            print(f'origineel: {player.dir}')
+            player.dir = player.cset[event.key]
+            print(f'ori nieuw: {player.dir}')
 
     def move(self):
-        print(f'we move')
+        #print(f'we move')
         temp = copy.deepcopy(self.body)
         goalx=self.body[0][1][0]+compass[self.dir][0]
         goaly=self.body[0][1][1]+compass[self.dir][1]
-        test = check(board,goalx,goaly)
-        print(f'test gives me: {test}')
+        test = -1
+        while test == -1 or test >9:#look for a valid direction
+            goalx=self.body[0][1][0]+compass[self.dir][0]
+            goaly=self.body[0][1][1]+compass[self.dir][1]
+            #print(f'testing for: {goalx, goaly}')
+            test=check(board,goalx,goaly)
+            says = 'OK' if test ==0 else 'NO!'
+            #print(f'computer says: {says}')
+            'right bottom left top'
+            if test ==10:
+                self.dir='S'
+            if test ==11:
+                self.dir='W'
+            if test ==12:
+                self.dir='N'
+            if test ==13:
+                self.dir='E'
+        #now we could move
         if test == -1:
             self.die()
         if test == 1:
             self.grow = 1
-        if test == 2:
+        if test == 2 or board.tick%Starve_tic ==0:
             self.grow = -1
-        self.body[0][1][0]=goalx
-        self.body[0][1][1]=goaly
+        self.body[0][1][0]+=compass[self.dir][0]
+        self.body[0][1][1]+=compass[self.dir][1]
+        self.body[0][0]=len(self.body)
         for element in range(len(temp)):
             if element == 0:
                 continue
             self.body[element]=temp[element-1]
         if self.grow == 1:
-            print(f'we grow')
+            print(f'Player {self.number} grows')
             self.body.append(temp[-1])
             self.body[-1][0]=self.body[-2][0]+1
-            print(f'new body: {self.body}')
+            print(f'new segment for player {player.number}: {self.body}')
             self.grow = 0
         if self.grow == -1:
-            print(f'we shrink')
+            print(f'player {player.number} shrinks')
             self.body.pop() # remove last segment from the list
             self.grow = 0
+        print(f'Player {player.number} has length: {len(self.body)}')
+        if len(self.body)==0:
+            self.die()
     def die(self):
+        print(f'player {self.number} died!')
         quitgame()
     def show(self):
-        print(f'showing this player {self.body}')
+        #print(f'showing this player {self.body}')
         for seg,element in enumerate(self.body):
             #print(f'this segment: {seg} at :{element[1][0]},{element[1][1]}')
             row = element[1][0]
@@ -129,6 +165,7 @@ class Player:
 
 class Board:
     def __init__(self):
+        self.tick = 0
         self.xmax = BOARD_X
         self.ymax = BOARD_Y
         tiles=[[] for i in range(BOARD_X)]  # tiles is a list of lists
@@ -151,10 +188,12 @@ class Board:
     def tile(self,x,y):
         return self.gift[x][y]
     def update(self):
-        """not yet implemented
-           This function should check all the squares,
-           and make sure the food is still good.
-        """
+        self.tick+=1
+        #print(f'we live at: {self.tick}')
+        if self.tick%Food_spawn ==0:
+            for i in range(len(players)):
+                self.food(randint(0,BOARD_X-1),randint(0,BOARD_Y-1))
+            self.poison(randint(0,BOARD_X-1),randint(0,BOARD_Y-1))
     def food(self,x,y):
         self.gift[x][y]=1
     def poison(self,x,y):
@@ -176,13 +215,20 @@ class Board:
 #%% functions
 def check(board,goalx,goaly): #Could be a method, but should work for actors other
                               # than players
-    print(f'testing for {goalx, goaly}')
-    if 0 > goalx or goalx > BOARD_X:
-        print(f'You hit the side edge goal {goalx}, max{BOARD_X}')
-        return -1
-    if 0 > goaly or goaly > BOARD_Y:
-        print('You hit the top or bottom')
-        return -1
+    #print(f'looking at {goalx, goaly}')
+    if goalx+1 > BOARD_X:
+        print(f'You would fall off the right: {goalx}, max={BOARD_X}')
+        return 10
+    if goaly+1 > BOARD_Y:
+        print(f'You would fall off the bottom : {goaly}, max={BOARD_Y}')
+        return 11
+    if goalx < 0:
+        print(f'You would fall off the left {goalx}')
+        return 12
+    if goaly < 0:
+        print(f'You would fall off the top: {goalx}')
+        return 13
+
     if board.gift[goalx][goaly] == 1: #square has food
         board.gift[goalx][goaly] = 0 # food is now eaten
         return 1
@@ -217,24 +263,38 @@ if __name__ == "__main__": # Boilerplate code https://en.wikipedia.org/wiki/Boil
     board = Board()
     board.food(8,4)
     board.poison(8,2)
-
+    players=[]
     player1 = Player()
-    player2 = Player([1,6],'E')
+    players.append(player1)
+    player2 = Player([1,6],'E',cset=wasd)
+    players.append(player2)
+    #player3 = Player([4,4],'W',cset=ijkl)
+    #players.append(player3)
+
     board.show()
-    player1.show()
-    player2.show()
+    for player in players:
+        player.show()
     run = True
     while run:
         """ This is the game loop """
-        pygame.time.delay(1500)
-        player1.move()
-        player2.move()
-
+        pygame.time.delay(200)
+        for player in players:
+            player.move()
+        #board.update()
         board.show() #show the board before the players
-        player1.show()
-        player2.show()
+        for player in players:
+            player.show()
 
         for event in pygame.event.get():
+            #print(f'deze dan: {event}')
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    print(f'Escaped!')
+                    run = False
+                    continue
+                for player in players:
+                    player.dokey(event)
+
             if event.type == pygame.QUIT:
                 run = False
     """If the loop is done, go back to main menu, or just quit."""
