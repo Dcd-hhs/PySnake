@@ -49,6 +49,7 @@ Window_Height = 480
 Window_Width = 30 * BOARD_X
 Window_Height = 30 * BOARD_Y
 Background = WHT
+Tictime = 200
 Food_spawn = 32
 Food_spoil = 8
 Starve_tic = 40
@@ -277,7 +278,7 @@ if __name__ == "__main__": # Boilerplate code https://en.wikipedia.org/wiki/Boil
     run = True
     while run:
         """ This is the game loop """
-        pygame.time.delay(200)
+        pygame.time.delay(Tictime)
         for player in players:
             player.move()
         #board.update()
