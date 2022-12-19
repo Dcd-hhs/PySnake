@@ -2,18 +2,20 @@
 """
 Making a python snake game using pygame
 
-We will start with a playingfield of 15 by 15.
-every 32 game ticks a foodpoint will appear, which allows the snake to grow.
-If the food is not eaten, it goes bad, and after 38 gameticks it vanishes.
+We will start with a playingfield of [BOARDX] by [BOARDY].
+every [Food_spawn] game ticks a foodpoint will appear, which allows the snake to grow.
+If the food is not eaten, it goes bad, and after [38] gameticks it vanishes.
 The snake will start in the middle, and dies if it runs into itself or the wall.
-Or if it starves to death, losing a segment every 42 gameticks.
+Or if it starves to death, losing a segment every [Starve_tic] gameticks.
 
 
 The snake will be a list, or an array or an dictionary.
 
-
-
 TODO:
+    - change field apperance by graphics
+    - die whey running into self or other player
+
+DONE:
     - define playfield
         - 16 x 16, tiles will have a 5 px padding and be 20 px large.
         - no wrap around
